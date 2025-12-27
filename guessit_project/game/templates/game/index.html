@@ -1,0 +1,22 @@
+{% extends 'game/base.html' %}
+{% block content %}
+    <h1>Guess It!</h1>
+    <p>Enter a room code to join or create a new game.</p>
+    
+    <div style="margin-top: 2rem;">
+        <input type="text" id="roomInput" placeholder="Enter Room Code (e.g. ABCD)" style="text-transform:uppercase; font-size: 1.2rem; text-align: center;">
+        <br>
+        <button onclick="joinRoom()" style="font-size: 1.2rem; padding: 15px 40px;">PLAY</button>
+    </div>
+
+    <script>
+        function joinRoom() {
+            const code = document.getElementById('roomInput').value.trim().toUpperCase();
+            if(code) {
+                window.location.href = `/game/${code}/`;
+            } else {
+                alert("Please enter a room code!");
+            }
+        }
+    </script>
+{% endblock %}
