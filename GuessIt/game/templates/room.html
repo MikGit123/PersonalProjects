@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Guess It!</title>
+    <style>
+        /* Dark Mode Aesthetics */
+        body { background-color: #121212; color: #ffffff; font-family: sans-serif; text-align: center; }
+        .container { max-width: 600px; margin: 40px auto; padding: 20px; background: #1e1e1e; border-radius: 12px; }
+        
+        /* UI Elements */
+        input { padding: 10px; border-radius: 5px; border: none; background: #333; color: white; width: 70%; }
+        button { padding: 10px 20px; background: #bb86fc; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background: #9b66dc; }
+        .hidden { display: none; }
+        
+        /* List Styles */
+        ul { list-style: none; padding: 0; }
+        li { padding: 5px; color: #aaa; }
+        
+        .answer-card { background: #2c2c2c; margin: 10px; padding: 15px; border-radius: 8px; border: 1px solid #333; }
+        .reveal-btn { background: #03dac6; color: black; font-size: 0.8em; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Guess It! <small style="color:#666;">{{ room_code }}</small></h1>
+
+    <div id="lobbySection">
+        <input type="text" id="playerName" placeholder="Enter your name">
+        <br>
+        <button onclick="joinGame()">Join Session</button>
+        <h3>Players:</h3>
+        <ul id="playersList"></ul>
+        <button onclick="startGame()" style="margin-top:20px; background:#03dac6;">Start Game</button>
+    </div>
+
+    <div id="answerSection" class="hidden">
+        <h2>Write about: <span id="targetName" style="color:#bb86fc;"></span></h2>
+        <p>Question: <b>What is their secret hobby?</b></p>
+        <input type="text" id="answerInput" placeholder="Type answer here...">
+        <br>
+        <button onclick="submitAnswer()">Submit</button>
+    </div>
+
+    <div id="waitSection" class="hidden">
+        <h2>Waiting for others to finish...</h2>
+    </div>
+
+    <div id="revealSection" class="hidden">
+        <h2>Answers Revealed!</h2>
+        <p>Guess who wrote what:</p>
+        <div id="answersContainer"></div>
+    </div>
+</div>
+
+<script>
+    const roomCode = "{{ room_code }}";
+    // WebSocket Connection
+    const socket = new WebSocket(`ws://${window.location.host}/ws/game/${roomCode}/`);
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const type = data.type;
+        const content = data.data;
+
+        if (type === 'playerJoined') {
+            const li = document.createElement('li');
+            li.innerText = content.name;
+            document.getElementById('playersList').appendChild(li);
+        } 
+        else if (type === 'startRound') {
+            switchSection('answerSection');
+            document.getElementById('targetName').innerText = content.target;
+        }
+        else if (type === 'revealAnswers') {
+            switchSection('revealSection');
+            displayAnswers(content.answers);
+        }
+    };
+
+    // --- User Actions (CamelCase) ---
+
+    function joinGame() {
+        const name = document.getElementById('playerName').value;
+        if (!name) return alert("Name required!");
+        
+        socket.send(JSON.stringify({ 'action': 'joinGame', 'name': name }));
+        
+        // Disable input to prevent double join
+        document.getElementById('playerName').disabled = true; 
+    }
+
+    function startGame() {
+        socket.send(JSON.stringify({ 'action': 'startGame' }));
+    }
+
+    function submitAnswer() {
+        const text = document.getElementById('answerInput').value;
+        if (!text) return;
+
+        socket.send(JSON.stringify({ 'action': 'submitAnswer', 'answer': text }));
+        switchSection('waitSection');
+    }
+
+    // --- Helper Functions ---
+
+    function switchSection(sectionId) {
+        // Hides all sections, shows the requested one
+        const sections = ['lobbySection', 'answerSection', 'waitSection', 'revealSection'];
+        sections.forEach(id => document.getElementById(id).classList.add('hidden'));
+        document.getElementById(sectionId).classList.remove('hidden');
+    }
+
+    function displayAnswers(answers) {
+        const container = document.getElementById('answersContainer');
+        answers.forEach(item => {
+            // Create a card for each answer
+            const div = document.createElement('div');
+            div.className = 'answer-card';
+            div.innerHTML = `
+                <p><strong>Subject:</strong> ${item.subject}</p>
+                <p>"${item.text}"</p>
+                <button class="reveal-btn" onclick="this.nextElementSibling.classList.remove('hidden'); this.remove()">Reveal Writer</button>
+                <p class="hidden" style="color:#bb86fc; font-weight:bold;">Written by: ${item.writer}</p>
+            `;
+            container.appendChild(div);
+        });
+    }
+</script>
+
+</body>
+</html>
