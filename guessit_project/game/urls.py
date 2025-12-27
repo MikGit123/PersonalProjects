@@ -1,8 +1,7 @@
-from django.urls import path
-
-from game import views
+from django.contrib import admin
+from django.urls import path, include
 
 urlpatterns = [
-    path('', views.index, name='index'),
-    path('game/<str:room_code>/', views.room, name='room'),
+    path('admin/', admin.site.urls),
+    path('', include('game.urls')),  # This connects your game app to the project
 ]
